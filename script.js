@@ -2,7 +2,7 @@
   CleanStore Demo
   - Catálogo + filtros + carrito
   - Checkout por WhatsApp
-  - Lee config desde /api/settings (Netlify Function). Si no hay DB, usa defaults.
+  - Config desde /api/settings (Netlify Function). Si no hay DB, usa defaults.
 */
 
 const DEFAULT_CONFIG = {
@@ -10,7 +10,7 @@ const DEFAULT_CONFIG = {
     name: "CleanStore",
     tagline: "Descartables y productos de limpieza para hogares, comercios y mayoristas",
     city: "Mendoza",
-    whatsapp: "5492610000000", // ...
+    whatsapp: "5492610000000",
     phone: "261-0000000",
     email: "ventas@cleanstore.com",
     address: "Ejemplo 123, Mendoza",
@@ -20,13 +20,7 @@ const DEFAULT_CONFIG = {
     wholesale: "Descuentos por bulto/caja. Pedinos lista mayorista por WhatsApp.",
     notes: "Precios de ejemplo. Se confirma stock y total al coordinar."
   },
-  categories: [
-    "Descartables",
-    "Bolsas",
-    "Papel",
-    "Limpieza",
-    "Accesorios"
-  ],
+  categories: ["Descartables","Bolsas","Papel","Limpieza","Accesorios"],
   products: [
     { id: "p-vaso-200", name: "Vaso plástico 200cc", category: "Descartables", price: 2800, unit: "pack x50", badge: "Más vendido" },
     { id: "p-plato", name: "Plato plástico", category: "Descartables", price: 3200, unit: "pack x25", badge: "" },
@@ -53,15 +47,14 @@ const DEFAULT_CONFIG = {
 
 const state = {
   config: structuredClone(DEFAULT_CONFIG),
-  filtered: [],
+  products: [],
   cart: new Map(),
   category: "Todas",
   query: "",
   sort: "relevance"
 };
 
-function $(sel){return document.querySelector(sel)}
-function $all(sel){return Array.from(document.querySelectorAll(sel))}
+const $ = (s, el=document) => el.querySelector(s);
 
 function money(n){
   try {
@@ -71,13 +64,23 @@ function money(n){
   }
 }
 
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, (c)=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function waLink(phone, text){
+  const p = String(phone||'').replace(/\D/g,'');
+  const base = p ? `https://wa.me/${p}` : 'https://wa.me/';
+  return `${base}?text=${encodeURIComponent(text||'')}`;
+}
+
 async function loadConfig(){
   try {
-    const r = await fetch('/api/settings', { cache: 'no-store' });
-    if (!r.ok) throw new Error('No settings');
+    const r = await fetch('/api/settings', { cache:'no-store' });
+    if (!r.ok) throw new Error('no settings');
     const data = await r.json();
-
-    // Merge suave
     state.config = {
       ...structuredClone(DEFAULT_CONFIG),
       ...data,
@@ -88,287 +91,270 @@ async function loadConfig(){
   }
 }
 
-function applyBrand(){
-  const { store } = state.config;
-  document.title = `${store.name} | ${store.city}`;
-  $('#brandName').textContent = store.name;
-  $('#brandTagline').textContent = store.tagline;
-  $('#heroTitle').textContent = `${store.name}: descartables y limpieza`;
-  $('#heroSubtitle').textContent = `${store.delivery} · ${store.payments}`;
+function applyText(){
+  const s = state.config.store;
 
-  $('#footerName').textContent = store.name;
-  $('#footerCity').textContent = store.city;
-  $('#footerHours').textContent = store.hours;
-  $('#footerAddress').textContent = store.address;
-  $('#footerEmail').textContent = store.email;
-  $('#footerPhone').textContent = store.phone;
+  // Brand + hero
+  $('#storeName') && ($('#storeName').textContent = s.name);
+  $('#storeTagline') && ($('#storeTagline').textContent = s.tagline);
+  $('#storeName2') && ($('#storeName2').textContent = s.name);
 
-  $('#whatsBtn').href = waLink(store.whatsapp, `Hola! Quiero consultar precios/stock.`);
-  $('#whatsBtn2').href = waLink(store.whatsapp, `Hola! Quiero la lista mayorista.`);
-  $('#ctaWhats').href = waLink(store.whatsapp, `Hola! Quiero hacer un pedido.`);
+  // Contact blocks
+  $('#deliveryText') && ($('#deliveryText').textContent = s.delivery);
+  $('#paymentsText') && ($('#paymentsText').textContent = s.payments);
+  $('#wholesaleText') && ($('#wholesaleText').textContent = s.wholesale);
+  $('#notesText') && ($('#notesText').textContent = s.notes);
 
-  $('#deliveryText').textContent = store.delivery;
-  $('#paymentsText').textContent = store.payments;
-  $('#wholesaleText').textContent = store.wholesale;
-  $('#notesText').textContent = store.notes;
-}
+  $('#addressText') && ($('#addressText').textContent = s.address);
+  $('#hoursText') && ($('#hoursText').textContent = s.hours);
+  $('#phoneText') && ($('#phoneText').textContent = s.phone);
+  $('#emailText') && ($('#emailText').textContent = s.email);
 
-function waLink(phone, text){
-  const p = String(phone||'').replace(/\D/g,'');
-  const base = p ? `https://wa.me/${p}` : 'https://wa.me/';
-  return `${base}?text=${encodeURIComponent(text||'')}`;
+  // WhatsApp links
+  const major = $('#waMajorista');
+  const contact = $('#waContact');
+  if (major) major.href = waLink(s.whatsapp, `Hola! Quiero la lista mayorista. (${s.name})`);
+  if (contact) contact.href = waLink(s.whatsapp, `Hola! Quiero consultar precios/stock. (${s.name})`);
+
+  // year
+  $('#year') && ($('#year').textContent = new Date().getFullYear());
 }
 
 function renderCategories(){
-  const cats = ['Todas', ...(state.config.categories||[])];
-  const wrap = $('#catPills');
+  const wrap = $('#categories');
+  if (!wrap) return;
   wrap.innerHTML = '';
-  cats.forEach(c => {
+  const cats = ['Todas', ...(state.config.categories||[])];
+  cats.forEach((c)=>{
     const b = document.createElement('button');
-    b.className = 'pill' + (state.category===c ? ' active' : '');
     b.type = 'button';
+    b.className = 'catBtn' + (state.category===c ? ' active' : '');
     b.textContent = c;
-    b.addEventListener('click', () => {
+    b.addEventListener('click', ()=>{
       state.category = c;
       renderCategories();
-      filterAndRender();
+      computeAndRender();
     });
     wrap.appendChild(b);
   });
 }
 
-function filterAndRender(){
+function computeAndRender(){
   const q = state.query.trim().toLowerCase();
   let items = [...(state.config.products||[])];
 
-  if (state.category !== 'Todas') {
-    items = items.filter(p => p.category === state.category);
-  }
-  if (q) {
-    items = items.filter(p => `${p.name} ${p.category} ${p.unit}`.toLowerCase().includes(q));
-  }
+  if (state.category !== 'Todas') items = items.filter(p => p.category === state.category);
+  if (q) items = items.filter(p => `${p.name} ${p.category} ${p.unit}`.toLowerCase().includes(q));
 
-  if (state.sort === 'price_asc') items.sort((a,b)=>a.price-b.price);
-  if (state.sort === 'price_desc') items.sort((a,b)=>b.price-a.price);
-  if (state.sort === 'name_asc') items.sort((a,b)=>a.name.localeCompare(b.name));
+  const sort = state.sort;
+  if (sort === 'priceAsc') items.sort((a,b)=>a.price-b.price);
+  if (sort === 'priceDesc') items.sort((a,b)=>b.price-a.price);
+  if (sort === 'nameAsc') items.sort((a,b)=>a.name.localeCompare(b.name));
 
-  state.filtered = items;
-  renderGrid();
+  state.products = items;
+  renderProducts();
+  renderCart();
 }
 
-function iconForCategory(cat){
-  const map = {
-    'Descartables':'🍽️',
-    'Bolsas':'🛍️',
-    'Papel':'🧻',
-    'Limpieza':'🧼',
-    'Accesorios':'🧽'
-  };
-  return map[cat] || '🧴';
-}
-
-function renderGrid(){
-  const grid = $('#grid');
+function renderProducts(){
+  const grid = $('#products');
+  if (!grid) return;
   grid.innerHTML = '';
 
-  if (!state.filtered.length){
-    grid.innerHTML = `<div class="empty">No encontramos productos con ese filtro. Probá con otra categoría o buscá distinto 🙌</div>`;
+  if (!state.products.length){
+    grid.innerHTML = `<div class="card" style="padding:14px">No encontramos productos con ese filtro. Probá otra categoría o buscá distinto 🙌</div>`;
     return;
   }
 
-  for (const p of state.filtered){
-    const card = document.createElement('article');
-    card.className = 'card';
-
+  for (const p of state.products){
     const qty = state.cart.get(p.id)?.qty || 0;
 
-    card.innerHTML = `
-      <div class="cardTop">
-        <div class="avatar" aria-hidden="true">${iconForCategory(p.category)}</div>
-        <div class="meta">
-          <div class="metaLine">
-            <h3>${escapeHtml(p.name)}</h3>
-            ${p.badge ? `<span class="badge">${escapeHtml(p.badge)}</span>` : ''}
-          </div>
-          <div class="metaSub">${escapeHtml(p.category)} · ${escapeHtml(p.unit||'')
-          }</div>
+    const el = document.createElement('article');
+    el.className = 'card product';
+    el.innerHTML = `
+      <div class="top">
+        <div>
+          <h3 class="pname">${escapeHtml(p.name)}</h3>
+          <p class="pmeta">${escapeHtml(p.category)} · ${escapeHtml(p.unit||'')}</p>
         </div>
+        ${p.badge ? `<span class="badgeP">${escapeHtml(p.badge)}</span>` : ''}
       </div>
-      <div class="cardBottom">
-        <div class="price">${money(p.price)}</div>
-        <div class="actions">
-          <button class="btn small" data-act="minus" ${qty<=0?'disabled':''} aria-label="Quitar">−</button>
-          <div class="qty" aria-label="Cantidad">${qty}</div>
-          <button class="btn small" data-act="plus" aria-label="Agregar">+</button>
+      <div class="price">${money(p.price)}</div>
+      <div class="pactions">
+        <div class="qty" aria-label="Cantidad">
+          <button type="button" data-act="minus" ${qty<=0?'disabled':''} aria-label="Quitar">−</button>
+          <span class="qval">${qty}</span>
+          <button type="button" data-act="plus" aria-label="Agregar">+</button>
         </div>
+        <button class="btn btn--soft" type="button" data-act="quick">Agregar</button>
       </div>
     `;
 
-    card.addEventListener('click', (e)=>{
+    el.addEventListener('click', (e)=>{
       const act = e.target?.dataset?.act;
       if (!act) return;
       e.preventDefault();
       if (act==='plus') addToCart(p, 1);
       if (act==='minus') addToCart(p, -1);
-      filterAndRender();
+      if (act==='quick') addToCart(p, 1);
+      computeAndRender();
     });
 
-    grid.appendChild(card);
+    grid.appendChild(el);
   }
-
-  updateCartBadge();
 }
 
-function escapeHtml(s){
-  return String(s??'').replace(/[&<>"']/g, (m)=>({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-  })[m]);
-}
-
-function addToCart(product, delta){
-  const cur = state.cart.get(product.id) || { product, qty: 0 };
-  const next = Math.max(0, cur.qty + delta);
-  if (next === 0) state.cart.delete(product.id);
-  else state.cart.set(product.id, { product, qty: next });
-  updateCartBadge();
+function addToCart(p, delta){
+  const cur = state.cart.get(p.id) || { product:p, qty:0 };
+  const nextQty = Math.max(0, (cur.qty||0) + delta);
+  if (nextQty === 0) state.cart.delete(p.id);
+  else state.cart.set(p.id, { product:p, qty: nextQty });
 }
 
 function cartCount(){
-  let c=0;
-  for (const v of state.cart.values()) c += v.qty;
+  let c = 0;
+  for (const item of state.cart.values()) c += item.qty;
   return c;
 }
 
 function cartTotal(){
-  let t=0;
-  for (const {product, qty} of state.cart.values()) t += (product.price||0)*qty;
+  let t = 0;
+  for (const item of state.cart.values()) t += item.qty * (item.product.price||0);
   return t;
 }
 
-function updateCartBadge(){
-  const n = cartCount();
-  $('#cartCount').textContent = String(n);
-  $('#cartCount2').textContent = String(n);
-  $('#cartTotal').textContent = money(cartTotal());
-  $('#floatingCart').classList.toggle('show', n>0);
-}
+function renderCart(){
+  const count = cartCount();
+  $('#cartCount') && ($('#cartCount').textContent = String(count));
+  $('#floatingCount') && ($('#floatingCount').textContent = String(count));
+  $('#cartTotal') && ($('#cartTotal').textContent = money(cartTotal()));
 
-function openCart(){
-  const modal = $('#cartModal');
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
-  renderCartModal();
-}
-
-function closeCart(){
-  const modal = $('#cartModal');
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden','true');
-}
-
-function renderCartModal(){
-  const list = $('#cartList');
+  const list = $('#cartItems');
+  if (!list) return;
   list.innerHTML = '';
 
-  const entries = [...state.cart.values()];
-  if (!entries.length){
-    list.innerHTML = `<div class="empty">Tu carrito está vacío. Agregá productos del catálogo 👆</div>`;
-    $('#checkoutBtn').disabled = true;
+  if (count === 0){
+    list.innerHTML = `<div class="small" style="padding:10px">Tu carrito está vacío. Sumá productos desde el catálogo 👇</div>`;
     return;
   }
 
-  $('#checkoutBtn').disabled = false;
-
-  for (const {product, qty} of entries){
+  for (const {product, qty} of state.cart.values()){
     const row = document.createElement('div');
     row.className = 'cartRow';
     row.innerHTML = `
-      <div class="cartLeft">
-        <div class="cartIcon">${iconForCategory(product.category)}</div>
-        <div>
-          <div class="cartName">${escapeHtml(product.name)}</div>
-          <div class="cartMeta">${escapeHtml(product.unit||'')} · ${money(product.price)} c/u</div>
-        </div>
+      <div>
+        <b>${escapeHtml(product.name)}</b>
+        <small>${escapeHtml(product.category)} · ${escapeHtml(product.unit||'')} · ${money(product.price)}</small>
       </div>
-      <div class="cartRight">
-        <button class="btn small" data-act="minus">−</button>
-        <div class="qty">${qty}</div>
-        <button class="btn small" data-act="plus">+</button>
+      <div style="text-align:right">
+        <div class="qty" style="justify-content:flex-end">
+          <button type="button" data-act="minus" aria-label="Quitar">−</button>
+          <span class="qval">${qty}</span>
+          <button type="button" data-act="plus" aria-label="Agregar">+</button>
+        </div>
       </div>
     `;
 
     row.addEventListener('click', (e)=>{
       const act = e.target?.dataset?.act;
       if (!act) return;
+      e.preventDefault();
       if (act==='plus') addToCart(product, 1);
       if (act==='minus') addToCart(product, -1);
-      renderCartModal();
-      filterAndRender();
+      computeAndRender();
     });
 
     list.appendChild(row);
   }
-
-  $('#modalTotal').textContent = money(cartTotal());
 }
 
-function buildOrderMessage(){
-  const { store } = state.config;
-  const lines = [];
-  lines.push(`Hola! Quiero hacer un pedido en *${store.name}*`);
-  lines.push('');
-  lines.push('*Detalle:*');
-
-  for (const {product, qty} of state.cart.values()){
-    const subtotal = (product.price||0)*qty;
-    lines.push(`- ${qty} x ${product.name} (${product.unit}) = ${money(subtotal)}`);
-  }
-
-  lines.push('');
-  lines.push(`*Total estimado:* ${money(cartTotal())}`);
-  lines.push('');
-  lines.push(`📍 Ciudad/Zona: ${store.city}`);
-  lines.push('🧾 A confirmar stock, envío y total final.');
-  return lines.join('\n');
+function openCart(){
+  const drawer = $('#cart');
+  const backdrop = $('#cartBackdrop');
+  if (!drawer || !backdrop) return;
+  drawer.hidden = false;
+  backdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
 }
 
-function wire(){
-  $('#search').addEventListener('input', (e)=>{
-    state.query = e.target.value || '';
-    filterAndRender();
-  });
-  $('#sort').addEventListener('change', (e)=>{
-    state.sort = e.target.value;
-    filterAndRender();
-  });
+function closeCart(){
+  const drawer = $('#cart');
+  const backdrop = $('#cartBackdrop');
+  if (!drawer || !backdrop) return;
+  drawer.hidden = true;
+  backdrop.hidden = true;
+  document.body.style.overflow = '';
+}
 
-  $('#openCart').addEventListener('click', openCart);
-  $('#floatingCart').addEventListener('click', openCart);
-  $('#closeCart').addEventListener('click', closeCart);
-  $('#cartBackdrop').addEventListener('click', closeCart);
-
-  $('#checkoutBtn').addEventListener('click', ()=>{
-    const msg = buildOrderMessage();
-    const url = waLink(state.config.store.whatsapp, msg);
-    window.open(url, '_blank', 'noopener,noreferrer');
+function checkout(){
+  const s = state.config.store;
+  const items = Array.from(state.cart.values()).map(({product, qty})=>{
+    const line = `• ${product.name} (${qty} x ${money(product.price)}) = ${money(qty*product.price)}`;
+    return line;
   });
 
-  // Smooth scroll
-  $all('a[data-scroll]').forEach(a=>{
+  const text = [
+    `Hola! Quiero hacer un pedido en ${s.name}.`,
+    '',
+    ...items,
+    '',
+    `Total estimado: ${money(cartTotal())}`,
+    `Zona/Ciudad: ${s.city}`,
+    '',
+    '¿Hay stock y cuánto queda el total final con envío?'
+  ].join('\n');
+
+  window.open(waLink(s.whatsapp, text), '_blank', 'noopener');
+}
+
+function wireUI(){
+  // smooth scroll
+  document.querySelectorAll('[data-scroll]').forEach(a=>{
     a.addEventListener('click', (e)=>{
+      const href = a.getAttribute('href');
+      if (!href || !href.startsWith('#')) return;
+      const target = document.querySelector(href);
+      if (!target) return;
       e.preventDefault();
-      const id = a.getAttribute('href');
-      document.querySelector(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
+      target.scrollIntoView({ behavior:'smooth', block:'start' });
     });
   });
+
+  // search + sort
+  const search = $('#search');
+  const sort = $('#sort');
+  if (search){
+    search.addEventListener('input', ()=>{
+      state.query = search.value || '';
+      computeAndRender();
+    });
+  }
+  if (sort){
+    sort.addEventListener('change', ()=>{
+      state.sort = sort.value;
+      computeAndRender();
+    });
+  }
+
+  // cart open/close
+  $('#openCart') && $('#openCart').addEventListener('click', openCart);
+  $('#floatingCart') && $('#floatingCart').addEventListener('click', openCart);
+  $('#closeCart') && $('#closeCart').addEventListener('click', closeCart);
+  $('#cartBackdrop') && $('#cartBackdrop').addEventListener('click', closeCart);
+
+  // checkout
+  $('#checkoutBtn') && $('#checkoutBtn').addEventListener('click', checkout);
+
+  // esc closes
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') closeCart();
+  });
 }
 
-async function init(){
+(async function init(){
   await loadConfig();
-  applyBrand();
-  wire();
+  applyText();
   renderCategories();
-  filterAndRender();
-}
-
-init();
+  wireUI();
+  computeAndRender();
+})();
