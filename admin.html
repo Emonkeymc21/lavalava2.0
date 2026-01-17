@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Panel Admin - CleanStore Demo" />
+  <title>Admin | CleanStore Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .admin{
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 28px 16px 80px;
+    }
+    .admin h1{margin:0 0 8px}
+    .admin .row{display:flex;gap:10px;flex-wrap:wrap}
+    .admin label{display:block;font-size:.9rem;color:var(--muted);margin:10px 0 6px}
+    .admin input,.admin textarea,.admin select{
+      width:100%;
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(8,12,22,.65);
+      color: var(--text);
+      outline:none;
+    }
+    .admin textarea{min-height:88px;resize:vertical}
+    .admin .col{flex:1;min-width:240px}
+    table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:14px}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}
+    th{color:var(--muted);font-weight:600;font-size:.9rem;background: rgba(255,255,255,.04)}
+    .mini{font-size:.85rem;color:var(--muted)}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.06)}
+    .status{display:inline-flex;align-items:center;gap:8px}
+    .dot{width:9px;height:9px;border-radius:50%}
+    .dot.ok{background:var(--accent2)}
+    .dot.warn{background:#fbbf24}
+    .dot.bad{background:var(--danger)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .btnSmall{padding:9px 12px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav__inner">
+      <a href="index.html" class="brand" aria-label="Volver">
+        <span class="brand__mark">CS</span>
+        <span class="brand__text">
+          <strong>Panel Admin (Demo)</strong>
+          <small>Editar datos del negocio + productos</small>
+        </span>
+      </a>
+      <div class="chip status" id="apiStatus">
+        <span class="dot warn" id="apiDot"></span>
+        <span id="apiText">Comprobando conexión…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin">
+    <h1>Panel Admin</h1>
+    <p class="mini">
+      Este panel guarda en una DB (Neon) usando Netlify Functions. Si no hay DB configurada, igual te deja editar y <b>exportar</b> la configuración para que el dueño te pase la data.
+    </p>
+
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <h2>Datos del negocio</h2>
+          <p class="muted">Marca, WhatsApp, horarios, envíos y texto mayorista.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Nombre</label>
+          <input id="store_name" placeholder="CleanStore" />
+        </div>
+        <div class="col">
+          <label>Tagline</label>
+          <input id="store_tagline" placeholder="Descartables y productos de limpieza" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Ciudad/Zona</label>
+          <input id="store_city" placeholder="Mendoza" />
+        </div>
+        <div class="col">
+          <label>WhatsApp (solo números, con código país)</label>
+          <input id="store_whatsapp" placeholder="5492610000000" />
+        </div>
+        <div class="col">
+          <label>Teléfono</label>
+          <input id="store_phone" placeholder="261-0000000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Email</label>
+          <input id="store_email" placeholder="ventas@cleanstore.com" />
+        </div>
+        <div class="col">
+          <label>Dirección</label>
+          <input id="store_address" placeholder="Ejemplo 123, Mendoza" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Horarios</label>
+          <input id="store_hours" placeholder="Lun a Vie 9:00-18:00 · Sáb 9:00-13:00" />
+        </div>
+        <div class="col">
+          <label>Envíos</label>
+          <input id="store_delivery" placeholder="Envíos en el día…" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Pagos</label>
+          <input id="store_payments" placeholder="Efectivo · Transferencia · Mercado Pago" />
+        </div>
+        <div class="col">
+          <label>Mayoristas</label>
+          <input id="store_wholesale" placeholder="Descuentos por bulto/caja…" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Nota (aclaración)</label>
+          <textarea id="store_notes" placeholder="Precios de ejemplo…"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <h2>Productos</h2>
+          <p class="muted">Cargá productos, categoría, precio y unidad. El sitio arma el catálogo y el carrito automáticamente.</p>
+        </div>
+        <div class="section__actions">
+          <button class="btn btn--ghost" id="addProduct" type="button">+ Agregar producto</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table id="productsTable">
+          <thead>
+            <tr>
+              <th style="width:18%">ID</th>
+              <th>Nombre</th>
+              <th style="width:16%">Categoría</th>
+              <th style="width:12%">Precio</th>
+              <th style="width:14%">Unidad</th>
+              <th style="width:14%">Badge</th>
+              <th style="width:10%">Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="saveBtn" type="button">Guardar en la web</button>
+        <button class="btn btn--ghost" id="exportBtn" type="button">Exportar JSON</button>
+        <input type="file" id="importFile" accept="application/json" hidden />
+        <button class="btn btn--ghost" id="importBtn" type="button">Importar JSON</button>
+        <a class="btn btn--ghost" href="index.html">Ver sitio</a>
+      </div>
+
+      <p class="mini" id="saveMsg" style="margin-top:10px"></p>
+    </section>
+  </main>
+
+  <script>
+    const $ = (s, el=document)=> el.querySelector(s);
+    const $all = (s, el=document)=> Array.from(el.querySelectorAll(s));
+
+    const DEFAULT = {
+      store: {
+        name: "CleanStore",
+        tagline: "Descartables y productos de limpieza para hogares, comercios y mayoristas",
+        city: "Mendoza",
+        whatsapp: "5492610000000",
+        phone: "261-0000000",
+        email: "ventas@cleanstore.com",
+        address: "Ejemplo 123, Mendoza",
+        hours: "Lun a Vie 9:00-18:00 · Sáb 9:00-13:00",
+        delivery: "Envíos en el día en Gran Mendoza (según zona) · Retiro en local",
+        payments: "Efectivo · Transferencia · Mercado Pago",
+        wholesale: "Descuentos por bulto/caja. Pedinos lista mayorista por WhatsApp.",
+        notes: "Precios de ejemplo. Se confirma stock y total al coordinar."
+      },
+      categories: ["Descartables","Bolsas","Papel","Limpieza","Accesorios"],
+      products: []
+    };
+
+    let config = structuredClone(DEFAULT);
+
+    function setApiStatus(kind, text){
+      const dot = $('#apiDot');
+      dot.className = 'dot ' + (kind==='ok'?'ok':kind==='bad'?'bad':'warn');
+      $('#apiText').textContent = text;
+    }
+
+    async function load(){
+      try{
+        const r = await fetch('/api/settings', { cache:'no-store' });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        config = {
+          ...structuredClone(DEFAULT),
+          ...data,
+          store: { ...DEFAULT.store, ...(data.store||{}) }
+        };
+        setApiStatus('ok', 'Conectado a la API');
+      }catch(e){
+        setApiStatus('warn', 'Sin DB/API (modo demo)');
+        config = structuredClone(DEFAULT);
+        // Productos de ejemplo (si la API no devuelve)
+        config.products = [
+          { id:"p-vaso-200", name:"Vaso plástico 200cc", category:"Descartables", price:2800, unit:"pack x50", badge:"Más vendido" },
+          { id:"p-bolsa-consorcio", name:"Bolsa consorcio 60x90", category:"Bolsas", price:5600, unit:"pack x10", badge:"Mayorista" },
+          { id:"p-lavandina", name:"Lavandina", category:"Limpieza", price:1200, unit:"1L", badge:"" }
+        ];
+      }
+      hydrateForm();
+      renderProducts();
+    }
+
+    function hydrateForm(){
+      const s = config.store || {};
+      $('#store_name').value = s.name || '';
+      $('#store_tagline').value = s.tagline || '';
+      $('#store_city').value = s.city || '';
+      $('#store_whatsapp').value = s.whatsapp || '';
+      $('#store_phone').value = s.phone || '';
+      $('#store_email').value = s.email || '';
+      $('#store_address').value = s.address || '';
+      $('#store_hours').value = s.hours || '';
+      $('#store_delivery').value = s.delivery || '';
+      $('#store_payments').value = s.payments || '';
+      $('#store_wholesale').value = s.wholesale || '';
+      $('#store_notes').value = s.notes || '';
+    }
+
+    function pullForm(){
+      config.store = {
+        name: $('#store_name').value.trim(),
+        tagline: $('#store_tagline').value.trim(),
+        city: $('#store_city').value.trim(),
+        whatsapp: $('#store_whatsapp').value.trim().replace(/\D/g,''),
+        phone: $('#store_phone').value.trim(),
+        email: $('#store_email').value.trim(),
+        address: $('#store_address').value.trim(),
+        hours: $('#store_hours').value.trim(),
+        delivery: $('#store_delivery').value.trim(),
+        payments: $('#store_payments').value.trim(),
+        wholesale: $('#store_wholesale').value.trim(),
+        notes: $('#store_notes').value.trim()
+      };
+    }
+
+    function rowTemplate(p){
+      return `
+        <tr data-id="${p.id}">
+          <td><input value="${escapeHtml(p.id)}" data-k="id" /></td>
+          <td><input value="${escapeHtml(p.name)}" data-k="name" /></td>
+          <td><input value="${escapeHtml(p.category)}" data-k="category" /></td>
+          <td><input value="${Number(p.price||0)}" data-k="price" inputmode="numeric" /></td>
+          <td><input value="${escapeHtml(p.unit||'')}" data-k="unit" /></td>
+          <td><input value="${escapeHtml(p.badge||'')}" data-k="badge" /></td>
+          <td><button class="btn btn--ghost btnSmall" data-remove>Eliminar</button></td>
+        </tr>
+      `;
+    }
+
+    function renderProducts(){
+      const tbody = $('#productsTable tbody');
+      tbody.innerHTML = (config.products||[]).map(rowTemplate).join('');
+
+      $all('#productsTable input').forEach(inp=>{
+        inp.addEventListener('input', ()=>{
+          const tr = inp.closest('tr');
+          const oldId = tr.getAttribute('data-id');
+          const k = inp.getAttribute('data-k');
+          const idx = (config.products||[]).findIndex(x=>x.id===oldId);
+          if(idx<0) return;
+          const val = (k==='price') ? Number(inp.value||0) : inp.value;
+          config.products[idx] = { ...config.products[idx], [k]: val };
+          if(k==='id') tr.setAttribute('data-id', inp.value);
+        });
+      });
+
+      $all('[data-remove]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const tr = btn.closest('tr');
+          const id = tr.getAttribute('data-id');
+          config.products = (config.products||[]).filter(p=>p.id!==id);
+          renderProducts();
+        });
+      });
+    }
+
+    function addProduct(){
+      const id = `p-${Math.random().toString(16).slice(2,8)}`;
+      config.products = [...(config.products||[]), { id, name:"Nuevo producto", category:"Accesorios", price:0, unit:"unidad", badge:"" }];
+      renderProducts();
+    }
+
+    function escapeHtml(s){
+      return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function save(){
+      pullForm();
+      // categorías derivadas
+      const cats = Array.from(new Set((config.products||[]).map(p=>p.category).filter(Boolean)));
+      config.categories = cats.length ? cats : (config.categories||DEFAULT.categories);
+
+      $('#saveMsg').textContent = 'Guardando…';
+      try{
+        const r = await fetch('/api/settings', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(config)
+        });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        $('#saveMsg').textContent = '✅ Guardado OK. Ya podés abrir el sitio y ver los cambios.';
+        setApiStatus('ok','Conectado a la API');
+      }catch(e){
+        $('#saveMsg').textContent = '⚠️ No se pudo guardar en la DB (modo demo). Exportá el JSON y pasáselo al dev/owner.';
+        setApiStatus('warn','Sin DB/API (modo demo)');
+      }
+    }
+
+    function exportJson(){
+      pullForm();
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cleanstore_config.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      $('#saveMsg').textContent = '📦 JSON exportado. Mandáselo al dueño para que complete la data.';
+    }
+
+    function importJson(file){
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const data = JSON.parse(String(reader.result||'{}'));
+          config = { ...structuredClone(DEFAULT), ...data, store:{...DEFAULT.store, ...(data.store||{})} };
+          hydrateForm();
+          renderProducts();
+          $('#saveMsg').textContent = '✅ JSON importado. Ahora podés guardar o exportar de nuevo.';
+        }catch(e){
+          $('#saveMsg').textContent = '❌ JSON inválido.';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    $('#addProduct').addEventListener('click', addProduct);
+    $('#saveBtn').addEventListener('click', save);
+    $('#exportBtn').addEventListener('click', exportJson);
+    $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
+    $('#importFile').addEventListener('change', (e)=>{
+      const f = e.target.files?.[0];
+      if(f) importJson(f);
+      e.target.value = '';
+    });
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Descartables y productos de limpieza. Catálogo, carrito y pedidos por WhatsApp." />
+
+  <meta property="og:title" content="CleanStore | Descartables y Limpieza" />
+  <meta property="og:description" content="Catálogo con carrito y pedidos por WhatsApp. Mayoristas y minoristas." />
+  <meta property="og:type" content="website" />
+
+  <title>CleanStore | Descartables y Limpieza</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="nav__inner">
+      <a href="#" class="brand" aria-label="Inicio">
+        <span class="brand__mark">CS</span>
+        <span class="brand__text">
+          <strong id="storeName">CleanStore</strong>
+          <small id="storeTagline">Descartables y productos de limpieza</small>
+        </span>
+      </a>
+
+      <nav class="nav__links">
+        <a href="#catalogo" data-scroll>Catálogo</a>
+        <a href="#mayorista" data-scroll>Mayoristas</a>
+        <a href="#envios" data-scroll>Envíos y pagos</a>
+        <a href="#contacto" data-scroll>Contacto</a>
+      </nav>
+
+      <button id="openCart" class="btn btn--ghost" type="button" aria-label="Abrir carrito">
+        🛒 <span class="hideSm">Carrito</span>
+        <span id="cartCount" class="pill">0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero__inner">
+        <div class="hero__copy">
+          <h1 id="heroTitle">Todo para tu casa, negocio o evento</h1>
+          <p id="heroSubtitle">Descartables, bolsas, papel y limpieza. Comprá rápido y pedí por WhatsApp.</p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="#catalogo" data-scroll>Ver catálogo</a>
+            <a class="btn btn--soft" href="#contacto" data-scroll>Consultar</a>
+          </div>
+          <div class="hero__badges">
+            <span class="chip">✅ Stock confirmado por WhatsApp</span>
+            <span class="chip">🚚 Envíos según zona</span>
+            <span class="chip">🏷️ Mayoristas</span>
+          </div>
+        </div>
+        <div class="hero__card" role="presentation">
+          <div class="kpi">
+            <div class="kpi__item">
+              <strong>+100</strong>
+              <span>Productos</span>
+            </div>
+            <div class="kpi__item">
+              <strong>Rápido</strong>
+              <span>Carrito + WhatsApp</span>
+            </div>
+            <div class="kpi__item">
+              <strong>Empresas</strong>
+              <span>Listas mayoristas</span>
+            </div>
+          </div>
+          <div class="hero__note">
+            <p><strong>Tip:</strong> armá tu carrito y al final tocá <em>“Pedir por WhatsApp”</em>. Te respondemos con disponibilidad y total final.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="catalogo" class="section">
+      <div class="section__head">
+        <h2>Catálogo</h2>
+        <p>Buscá, filtrá y sumá al carrito. Los precios son de ejemplo y se confirman al coordinar.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar__left">
+          <label class="input">
+            <span class="input__icon">🔎</span>
+            <input id="search" type="search" placeholder="Buscar productos… (ej: lavandina, bolsas, vasos)" />
+          </label>
+          <div id="categories" class="cats"></div>
+        </div>
+        <div class="toolbar__right">
+          <label class="select">
+            <span>Orden:</span>
+            <select id="sort">
+              <option value="relevance">Relevancia</option>
+              <option value="priceAsc">Precio: menor a mayor</option>
+              <option value="priceDesc">Precio: mayor a menor</option>
+              <option value="nameAsc">Nombre A→Z</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="products" class="grid"></div>
+    </section>
+
+    <section id="mayorista" class="section">
+      <div class="card split">
+        <div>
+          <h2>Mayoristas</h2>
+          <p id="wholesaleText">Descuentos por bulto/caja. Pedinos lista mayorista por WhatsApp.</p>
+          <ul class="check">
+            <li>Listas para almacenes, kioscos, gastronomía y eventos</li>
+            <li>Facturación / remitos (según acuerdo)</li>
+            <li>Entrega coordinada</li>
+          </ul>
+        </div>
+        <div class="callout">
+          <h3>¿Querés una lista por rubro?</h3>
+          <p>Decinos qué vendés (kiosco, almacén, restaurante, etc.) y armamos una propuesta.</p>
+          <a id="waMajorista" class="btn btn--primary" href="#">Pedir lista por WhatsApp</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="envios" class="section">
+      <div class="grid2">
+        <div class="card">
+          <h2>Envíos</h2>
+          <p id="deliveryText">Envíos en el día en Gran Mendoza (según zona) · Retiro en local</p>
+        </div>
+        <div class="card">
+          <h2>Pagos</h2>
+          <p id="paymentsText">Efectivo · Transferencia · Mercado Pago</p>
+        </div>
+      </div>
+      <div class="mutedNote" id="notesText">Precios de ejemplo. Se confirma stock y total al coordinar.</div>
+    </section>
+
+    <section id="contacto" class="section">
+      <div class="card split">
+        <div>
+          <h2>Contacto</h2>
+          <div class="info">
+            <div><span>📍</span><div><strong>Dirección</strong><div id="addressText">Ejemplo 123, Mendoza</div></div></div>
+            <div><span>🕒</span><div><strong>Horario</strong><div id="hoursText">Lun a Vie 9:00-18:00 · Sáb 9:00-13:00</div></div></div>
+            <div><span>📞</span><div><strong>Teléfono</strong><div id="phoneText">261-0000000</div></div></div>
+            <div><span>✉️</span><div><strong>Email</strong><div id="emailText">ventas@cleanstore.com</div></div></div>
+          </div>
+        </div>
+        <div class="callout">
+          <h3>¿Tenés dudas?</h3>
+          <p>Consultanos por WhatsApp y te respondemos con opciones y precios actualizados.</p>
+          <a id="waContact" class="btn btn--primary" href="#">Hablar por WhatsApp</a>
+          <a class="btn btn--ghost" href="admin.html">Ir al Admin (demo)</a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <div>
+          <strong id="storeName2">CleanStore</strong>
+          <div class="small">Demo de sitio (catálogo + carrito + WhatsApp + admin). Para pasarle al dueño y completar datos.</div>
+        </div>
+        <div class="small">© <span id="year"></span> · Hecho para demo</div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Floating cart -->
+  <button id="floatingCart" class="floating" type="button" aria-label="Carrito flotante">
+    🛒 <span id="floatingCount" class="pill">0</span>
+  </button>
+
+  <!-- Cart Drawer -->
+  <div id="cartBackdrop" class="backdrop" hidden></div>
+  <aside id="cart" class="drawer" aria-label="Carrito" hidden>
+    <div class="drawer__head">
+      <div>
+        <strong>Tu carrito</strong>
+        <div class="small" id="cartHint">Pedido por WhatsApp</div>
+      </div>
+      <button id="closeCart" class="iconBtn" type="button" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="cartItems" class="drawer__body"></div>
+
+    <div class="drawer__footer">
+      <div class="totals">
+        <span>Total estimado</span>
+        <strong id="cartTotal">$0</strong>
+      </div>
+      <button id="checkoutBtn" class="btn btn--primary" type="button">Pedir por WhatsApp</button>
+      <div class="small">*El total final se confirma según stock, promos y envío.</div>
+    </div>
+  </aside>
+
+  <script src="script.js"></script>
+</body>
+</html>
